@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Waitlist {
+  id         Int      @id @default(autoincrement())
+  email      String   @unique
+  location   String
+  user_type  UserType
+  created_at DateTime @default(now())
+
+  referral_code String?  @unique
+  referred_by   String?
+}
+
+enum UserType {
+  renter
+  landlord
+}
