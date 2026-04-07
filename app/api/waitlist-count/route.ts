@@ -1,44 +1,25 @@
 import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
+import { handleOptions, jsonResponse } from "@/lib/cors";
 
-const FRONTEND_ORIGIN = process.env.FRONTEND_URL || "http://localhost:3000";
-
-function corsHeaders() {
-  return {
-    "Access-Control-Allow-Origin": FRONTEND_ORIGIN,
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  };
+export async function OPTIONS(req: Request) {
+  return handleOptions(req);
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: corsHeaders(),
-  });
-}
-
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const count = await prisma.waitlist.count();
 
-    return NextResponse.json(
-      {
-        success: true,
-        count,
-      },
-      {
-        headers: corsHeaders(),
-      }
-    );
+    return jsonResponse(req, {
+      success: true,
+      count,
+    });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json(
+    console.error("WAITLIST COUNT ERROR:", error);
+
+    return jsonResponse(
+      req,
       { error: "Server error" },
-      {
-        status: 500,
-        headers: corsHeaders(),
-      }
+      { status: 500 }
     );
   }
 }

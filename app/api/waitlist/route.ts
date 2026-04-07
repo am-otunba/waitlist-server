@@ -1,26 +1,13 @@
 import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
-
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
-
-function getCorsHeaders() {
-  return {
-    "Access-Control-Allow-Origin": FRONTEND_URL,
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  };
-}
+import { handleOptions, jsonResponse } from "@/lib/cors";
 
 // helper
 function normalizeEmail(email: string) {
   return email.toLowerCase().trim();
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: getCorsHeaders(),
-  });
+export async function OPTIONS(req: Request) {
+  return handleOptions(req);
 }
 
 export async function POST(req: Request) {
@@ -32,22 +19,18 @@ export async function POST(req: Request) {
     location = location?.trim();
 
     if (!email || !location || !user_type) {
-      return NextResponse.json(
+      return jsonResponse(
+        req,
         { error: "Missing required fields" },
-        {
-          status: 400,
-          headers: getCorsHeaders(),
-        }
+        { status: 400 }
       );
     }
 
     if (!["renter", "landlord"].includes(user_type)) {
-      return NextResponse.json(
+      return jsonResponse(
+        req,
         { error: "Invalid user type" },
-        {
-          status: 400,
-          headers: getCorsHeaders(),
-        }
+        { status: 400 }
       );
     }
 
@@ -56,22 +39,20 @@ export async function POST(req: Request) {
     });
 
     if (existingUser) {
-      return NextResponse.json(
+      return jsonResponse(
+        req,
         { error: "Email already exists" },
-        {
-          status: 400,
-          headers: getCorsHeaders(),
-        }
+        { status: 400 }
       );
     }
+
     const user = await prisma.waitlist.create({
       data: {
         email,
         location,
         user_type,
-      }
-    })
-
+      },
+    });
 
     const position = await prisma.waitlist.count({
       where: {
@@ -81,7 +62,8 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json(
+    return jsonResponse(
+      req,
       {
         success: true,
         message: "Successfully joined the waitlist",
@@ -90,18 +72,15 @@ export async function POST(req: Request) {
       },
       {
         status: 201,
-        headers: getCorsHeaders(),
       }
     );
   } catch (error) {
     console.error(error);
 
-    return NextResponse.json(
+    return jsonResponse(
+      req,
       { error: "Server error" },
-      {
-        status: 500,
-        headers: getCorsHeaders(),
-      }
+      { status: 500 }
     );
   }
 }
@@ -127,30 +106,23 @@ export async function GET(req: Request) {
       prisma.waitlist.count(),
     ]);
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: entries,
-        pagination: {
-          total,
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit),
-        },
+    return jsonResponse(req, {
+      success: true,
+      data: entries,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       },
-      {
-        headers: getCorsHeaders(),
-      }
-    );
+    });
   } catch (error) {
     console.error(error);
 
-    return NextResponse.json(
+    return jsonResponse(
+      req,
       { error: "Server error" },
-      {
-        status: 500,
-        headers: getCorsHeaders(),
-      }
+      { status: 500 }
     );
   }
 }

@@ -1,18 +1,12 @@
 import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
-
-const FRONTEND_ORIGIN = process.env.FRONTEND_URL || "http://localhost:3000";
-
-function corsHeaders() {
-  return {
-    "Access-Control-Allow-Origin": FRONTEND_ORIGIN,
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  };
-}
+import { handleOptions, jsonResponse } from "@/lib/cors";
 
 function generateCode() {
   return Math.random().toString(36).substring(2, 8);
+}
+
+export async function OPTIONS(req: Request) {
+  return handleOptions(req);
 }
 
 export async function POST(req: Request) {
@@ -23,7 +17,8 @@ export async function POST(req: Request) {
     email = email?.toLowerCase().trim();
 
     if (!email || !referral_code) {
-      return NextResponse.json(
+      return jsonResponse(
+        req,
         { error: "Missing fields" },
         { status: 400 }
       );
@@ -34,27 +29,30 @@ export async function POST(req: Request) {
     });
 
     if (!referrer) {
-      return NextResponse.json(
+      return jsonResponse(
+        req,
         { error: "Invalid referral code" },
         { status: 400 }
       );
     }
 
-    // reward = move referrer up (by updating timestamp)
     await prisma.waitlist.update({
       where: { id: referrer.id },
       data: {
-        created_at: new Date(Date.now() - 1000), // slight boost
+        created_at: new Date(Date.now() - 1000),
       },
     });
 
-    return NextResponse.json({
+    return jsonResponse(req, {
       success: true,
       message: "Referral applied",
     });
-
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return jsonResponse(
+      req,
+      { error: "Server error" },
+      { status: 500 }
+    );
   }
 }
